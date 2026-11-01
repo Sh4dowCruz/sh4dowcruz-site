@@ -130,14 +130,15 @@ a { color: inherit; }
 .stage canvas { display: block; width: 100%; }
 .stage.shake { animation: shake .35s cubic-bezier(.36,.07,.19,.97); }
 @keyframes shake { 20%{transform:translate(-4px,1px)} 40%{transform:translate(4px,-1px)} 60%{transform:translate(-3px,0)} 80%{transform:translate(2px,0)} }
-.overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in oklab, var(--bg) 72%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-.card { width: 100%; max-width: 19rem; display: grid; gap: 10px; justify-items: center; text-align: center; animation: pop .32s cubic-bezier(.2,.9,.3,1.2) both; }
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px 16px; overflow-y: auto; background: color-mix(in oklab, var(--bg) 72%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.card { width: 100%; max-width: 19rem; display: grid; gap: 8px; justify-items: center; text-align: center; animation: pop .32s cubic-bezier(.2,.9,.3,1.2) both; }
 @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.96); } }
 .card .kicker { font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-.card .big { font-family: var(--font-display); font-size: 3.2rem; line-height: 1; font-weight: 600; letter-spacing: -.02em; }
+.card .big { font-family: var(--font-display); font-size: clamp(2.4rem, 9vw, 3.2rem); line-height: 1; font-weight: 600; letter-spacing: -.02em; }
 .card .sub { font-size: .8125rem; color: var(--muted); }
 .card .best-flag { font-size: .8125rem; font-weight: 600; color: var(--accent-ink); background: var(--accent); padding: 4px 10px; border-radius: 999px; animation: glow 1.4s ease-in-out infinite alternate; }
 @keyframes glow { to { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 22%, transparent); } }
+.card .sub:empty { display: none; }
 .card input { height: 42px; width: 100%; max-width: 14rem; text-align: center; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); outline: none; }
 .card input:focus { border-color: var(--accent); }
 .btn { min-height: 42px; padding: 0 20px; border-radius: 999px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: .875rem; transition: transform .15s ease-out; }
@@ -176,7 +177,7 @@ kbd { font-family: inherit; font-size: .7rem; padding: 1px 6px; border-radius: 5
 .step.p1 .medal { background: var(--gold); width: 36px; height: 36px; }
 .step.p2 .medal { background: var(--silver); }
 .step.p3 .medal { background: var(--bronze); }
-.step .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step .who { font-weight: 600; overflow-wrap: anywhere; line-height: 1.25; }
 .step .pts { font-family: var(--font-display); font-size: 1.6rem; line-height: 1.1; margin-top: 4px; }
 .step.p1 .pts { font-size: 2rem; }
 .step.empty { color: var(--muted); border-style: dashed; }
@@ -293,5 +294,8 @@ kbd { font-family: inherit; font-size: .7rem; padding: 1px 6px; border-radius: 5
 @media (max-width: 520px) {
   .profile h1, .page h1 { font-size: 2.5rem; }
   .podium { gap: 6px; }
+  .step { padding-inline: 6px; }
+  .step .who { font-size: .8125rem; }
   .step .pts { font-size: 1.3rem; } .step.p1 .pts { font-size: 1.6rem; }
+  .card .btn { min-height: 38px; }
 }

@@ -286,7 +286,7 @@ let current = null;
 function fit() {
   DPR = Math.min(2, devicePixelRatio || 1);
   W = stage.clientWidth;
-  H = game === "dino" ? clamp(Math.round(W * 0.36), 190, 260) : Math.min(W, 460);
+  H = game === "dino" ? clamp(Math.round(W * 0.4), 260, 290) : Math.min(W, 460);
   canvas.style.height = H + "px";
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   g2.setTransform(DPR, 0, 0, DPR, 0, 0);
