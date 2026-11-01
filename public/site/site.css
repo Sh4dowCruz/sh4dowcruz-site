@@ -125,7 +125,9 @@ a { color: inherit; }
 .pill:hover { color: var(--fg); border-color: color-mix(in oklab, var(--accent) 50%, transparent); }
 .pill svg { width: 13px; height: 13px; }
 .scoreline { display: flex; gap: 18px; align-items: baseline; font-size: .8125rem; color: var(--muted); }
-.scoreline b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--fg); margin-left: 6px; }
+.scoreline { margin-left: auto; white-space: nowrap; }
+/* Fixed-width digits so the row never changes size while the score counts up (it used to re-wrap and shake the page). */
+.scoreline b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--fg); margin-left: 6px; display: inline-block; min-width: 5ch; text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
 .stage { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface); border: 1px solid var(--line); touch-action: none; }
 .stage canvas { display: block; width: 100%; }
 .stage.shake { animation: shake .35s cubic-bezier(.36,.07,.19,.97); }
@@ -298,4 +300,6 @@ kbd { font-family: inherit; font-size: .7rem; padding: 1px 6px; border-radius: 5
   .step .who { font-size: .8125rem; }
   .step .pts { font-size: 1.3rem; } .step.p1 .pts { font-size: 1.6rem; }
   .card .btn { min-height: 38px; }
+  .scoreline { gap: 12px; }
+  .scoreline b { font-size: 1.25rem; }
 }
