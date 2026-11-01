@@ -11,7 +11,7 @@ Environment variables:
 | `DATABASE_URL` | Postgres (Neon). Added automatically by the Vercel Neon integration. |
 | `ANTHROPIC_API_KEY` | Lets Study call Claude. Kept on the server. |
 | `BETTER_AUTH_SECRET` | Any long random string. Signs the admin login. |
-| `BETTER_AUTH_URL` | `https://www.sh4dowcruz.com` |
+| `BETTER_AUTH_URL` | `https://sh4dowcruz.com` |
 | `STUDY_HOURLY_LIMIT` / `STUDY_DAILY_LIMIT` | Optional. Defaults 12 per visitor per hour, 400 per day. |
 | `ANTHROPIC_MODEL` | Optional. Defaults to `claude-sonnet-5-5`. |
 
