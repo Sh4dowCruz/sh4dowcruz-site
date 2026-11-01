@@ -565,8 +565,9 @@ function makeDino() {
     }
   }
   function frame(now) {
-    const dt = Math.min(0.033, (now - last) / 1000); last = now;
-    update(dt); draw(); raf = requestAnimationFrame(frame);
+    const dt = Math.max(0, Math.min(0.033, (now - last) / 1000)); last = Math.max(last, now);
+    raf = requestAnimationFrame(frame);
+    update(dt); draw();
   }
   return {
     mount() { reset(); last = performance.now(); raf = requestAnimationFrame(frame); setScore(0); },
@@ -590,9 +591,9 @@ function makeSnake() {
   let s, raf = 0, last = 0, parts = [], pops = [];
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   function reset() {
-    const body = [[7, 7], [6, 7], [5, 7]];
+    const body = [[3, 11], [2, 11], [1, 11]];
     s = { status: "idle", body, prev: body.map((c) => [...c]), dir: "right", queue: [], acc: 0, step: 0.15, food: null, score: 0, pulse: 0, combo: 0, lastEat: -9, t: 0, deathT: 0 };
-    placeFood(); parts = []; pops = [];
+    s.food = [11, 3]; s.pulse = 0; parts = []; pops = [];
   }
   function placeFood() {
     const free = [];
@@ -649,6 +650,19 @@ function makeSnake() {
     for (const p of pops) { p.y -= 30 * dt; p.life -= dt; }
     pops = pops.filter((p) => p.life > 0);
   }
+  // Trace the body with rounded corners: each joint becomes an arc, so turns curve instead of snapping.
+  function bodyPath(pts, radius) {
+    g2.beginPath();
+    g2.moveTo(pts[0][0], pts[0][1]);
+    if (pts.length === 1) { g2.lineTo(pts[0][0] + 0.1, pts[0][1]); return; }
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i - 1], [bx, by] = pts[i], [cx, cy] = pts[i + 1];
+      const r = Math.min(radius, Math.hypot(bx - ax, by - ay) / 2, Math.hypot(cx - bx, cy - by) / 2);
+      if (r > 0.5) g2.arcTo(bx, by, cx, cy, r); else g2.lineTo(bx, by);
+    }
+    const [lx, ly] = pts[pts.length - 1];
+    g2.lineTo(lx, ly);
+  }
   function draw() {
     const c = cell(), x0 = ox();
     g2.clearRect(0, 0, W, H);
@@ -658,21 +672,24 @@ function makeSnake() {
     g2.globalAlpha = 1;
     // food
     if (s.food) {
-      const [fx, fy] = center(s.food), k = 1 + Math.sin(s.pulse * 6) * 0.08, pop = Math.min(1, s.pulse * 5);
+      const [fx, fy] = center(s.food), k = 1 + Math.sin(s.pulse * 6) * 0.08, pop = clamp(s.pulse * 5, 0, 1);
       g2.fillStyle = colors.bad; g2.beginPath(); g2.arc(fx, fy + c * 0.04, c * 0.32 * k * pop, 0, Math.PI * 2); g2.fill();
       g2.fillStyle = colors.good; g2.beginPath(); g2.ellipse(fx + c * 0.1, fy - c * 0.3 * pop, c * 0.12, c * 0.06, -0.6, 0, Math.PI * 2); g2.fill();
       g2.fillStyle = colors.surface; g2.globalAlpha = 0.5; g2.beginPath(); g2.arc(fx - c * 0.1, fy - c * 0.05, c * 0.07, 0, Math.PI * 2); g2.fill(); g2.globalAlpha = 1;
     }
     // body (interpolated)
     const t = s.status === "play" ? clamp(s.acc / s.step, 0, 1) : 1;
-    const pts = s.body.map((b, i) => { const p = s.prev[i] || b; return center([p[0] + (b[0] - p[0]) * t, p[1] + (b[1] - p[1]) * t]); });
+    const moving = s.body.map((b, i) => { const p = s.prev[i] || b; return center([p[0] + (b[0] - p[0]) * t, p[1] + (b[1] - p[1]) * t]); });
+    // Between each pair of moving segments, the body passes through the grid cell the front one just left.
+    const pts = [moving[0]];
+    for (let i = 1; i < moving.length; i++) { if (s.prev[i - 1]) pts.push(center(s.prev[i - 1])); pts.push(moving[i]); }
     const fade = s.status === "dead" ? Math.max(0, 1 - s.deathT * 1.6) : 1;
     if (fade > 0) {
       g2.save(); g2.globalAlpha = fade; g2.lineCap = "round"; g2.lineJoin = "round";
       g2.strokeStyle = colors.accent; g2.lineWidth = c * 0.72;
-      g2.beginPath(); pts.forEach(([x, y], i) => (i ? g2.lineTo(x, y) : g2.moveTo(x, y))); if (pts.length === 1) g2.lineTo(pts[0][0] + 0.1, pts[0][1]); g2.stroke();
+      bodyPath(pts, c * 0.5); g2.stroke();
       g2.strokeStyle = colors.surface; g2.globalAlpha = fade * 0.18; g2.lineWidth = c * 0.22;
-      g2.beginPath(); pts.forEach(([x, y], i) => (i ? g2.lineTo(x, y) : g2.moveTo(x, y))); g2.stroke();
+      bodyPath(pts, c * 0.5); g2.stroke();
       g2.globalAlpha = fade;
       const [hx, hy] = pts[0], [dx, dy] = DIRS[s.dir];
       g2.fillStyle = colors.accent; g2.beginPath(); g2.arc(hx, hy, c * 0.44, 0, Math.PI * 2); g2.fill();
@@ -689,7 +706,7 @@ function makeSnake() {
     for (const p of pops) { g2.globalAlpha = clamp(p.life / 0.5, 0, 1); g2.fillStyle = colors.fg; g2.font = "600 13px Outfit, system-ui"; g2.textAlign = "center"; g2.fillText(p.text, p.x, p.y - c * 0.5); }
     g2.globalAlpha = 1;
   }
-  function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(); raf = requestAnimationFrame(frame); }
+  function frame(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = Math.max(last, now); raf = requestAnimationFrame(frame); update(dt); draw(); }
   let touch = null;
   const tStart = (e) => { if (s.status !== "play") return; touch = [e.clientX, e.clientY]; };
   const tMove = (e) => {
