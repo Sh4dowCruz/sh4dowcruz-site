@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Cruz">
+  <rect width="32" height="32" rx="8" fill="#12110f"/>
+  <circle cx="16" cy="16" r="12.6" fill="#e08a4f"/>
+  <circle cx="16" cy="16" r="10.15" fill="#f4efe6"/>
+  <path d="M20.55 10.35a6.55 6.55 0 1 0 .05 11.35" fill="none" stroke="#12110f" stroke-width="3.35" stroke-linecap="round"/>
+</svg>
