@@ -116,6 +116,12 @@ a { color: inherit; }
 .owner-edit input { flex: 1; min-width: 0; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; font-size: .8125rem; }
 
 /* arcade */
+/* The arcade is played by tapping and holding: never select text or open the iOS long-press menu there. */
+#view-home section[aria-label="Arcade"], #view-home section[aria-label="Arcade"] * {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+#view-home section[aria-label="Arcade"] input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+.stage, .pad, .dpad { touch-action: none; }
 .arcade-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); }
 .seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 9px; font-size: .8125rem; font-weight: 500; color: var(--muted); }

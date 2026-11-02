@@ -744,6 +744,9 @@ function selectGame(g) {
 }
 $$(".seg [data-game]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.game !== game) { sfx.click(); selectGame(b.dataset.game); } }));
 canvas.addEventListener("pointerdown", (e) => { if (game === "dino") { e.preventDefault(); current.pointer(); } });
+// Long presses in the arcade are game input, not "select text" or the context menu.
+const arcadeEl = document.querySelector('#view-home section[aria-label="Arcade"]');
+for (const ev of ["contextmenu", "selectstart"]) arcadeEl.addEventListener(ev, (e) => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault(); });
 const jb = $("#jumpBtn"), db = $("#duckBtn");
 jb.addEventListener("pointerdown", (e) => { e.preventDefault(); current.jump?.(true); });
 db.addEventListener("pointerdown", (e) => { e.preventDefault(); current.duck?.(true); });
