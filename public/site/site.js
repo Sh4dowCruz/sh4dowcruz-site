@@ -440,7 +440,12 @@ async function showOver(score) {
   if (isBest) { store.set("cruz.best." + game, score); paintBest(); }
   if (score > 0 && !me.verified) bumpStreak();
   const top = plat.boards[game][0]?.score || 0;
-  const rank = rankFor(game, score, name);
+  // Rank the player's standing, not just this run: a run below your board best shouldn't read as a lower place.
+  const mine = name ? plat.boards[game].find((r) => r.id === keyFor(name)) : null;
+  const beatsBoardBest = !mine || score > mine.score;
+  const rankLine = !(plat.boardReady[game] === true && score > 0) ? ""
+    : beatsBoardBest ? `That's #${rankFor(game, score, name)} on the board`
+    : `You're #${rankFor(game, mine.score, name)} on the board`;
   const boardTop = score > 0 && score >= top && plat.boardReady[game] === true;
   overlay.hidden = false;
   overlay.innerHTML = `
@@ -448,7 +453,7 @@ async function showOver(score) {
       <span class="kicker">Game over</span>
       <span class="big tnum" id="ovScore">0</span>
       ${isBest ? `<span class="best-flag">${boardTop ? "Top of the board" : "New personal best"}</span>` : `<span class="sub tnum">Best ${prev}</span>`}
-      <span class="sub" id="ovRank">${plat.boardReady[game] === true && score > 0 ? `That's #${rank} on the board` : ""}</span>
+      <span class="sub" id="ovRank">${rankLine}</span>
       <div class="btn-row">
         <button class="btn" type="button" id="againBtn">Play again</button>
         <a class="btn ghost" href="#board" style="display:inline-grid;place-items:center;text-decoration:none">Board</a>
