@@ -127,7 +127,7 @@ a { color: inherit; }
 .scoreline { display: flex; gap: 18px; align-items: baseline; font-size: .8125rem; color: var(--muted); }
 .scoreline { margin-left: auto; white-space: nowrap; }
 /* Fixed-width digits so the row never changes size while the score counts up (it used to re-wrap and shake the page). */
-.scoreline b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--fg); margin-left: 6px; display: inline-block; min-width: 5ch; text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+.scoreline b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--fg); margin-left: 6px; display: inline-block; min-width: 5ch; text-align: left; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
 .stage { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface); border: 1px solid var(--line); touch-action: none; }
 .stage canvas { display: block; width: 100%; }
 .stage.shake { animation: shake .35s cubic-bezier(.36,.07,.19,.97); }
@@ -151,10 +151,12 @@ a { color: inherit; }
 .pad { margin-top: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .pad button { height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: .875rem; transition: transform .12s; }
 .pad button:active { transform: scale(.96); }
-.dpad { margin: 12px auto 0; display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 46px); gap: 6px; justify-content: center; }
-.dpad button { border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
-.dpad button svg { width: 18px; height: 18px; }
-.dpad .u { grid-column: 2; } .dpad .l { grid-column: 1; grid-row: 2; } .dpad .d { grid-column: 2; grid-row: 2; } .dpad .r { grid-column: 3; grid-row: 2; }
+/* Cross-shaped pad with an empty middle so thumbs can't land on the wrong arrow. */
+.dpad { margin: 14px auto 0; width: min(100%, 300px); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 64px); gap: 10px; touch-action: none; }
+.dpad button { border-radius: 16px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; transition: transform .08s, background-color .12s; -webkit-tap-highlight-color: transparent; }
+.dpad button.hit { background: color-mix(in oklab, var(--accent) 22%, var(--surface)); transform: scale(.95); }
+.dpad button svg { width: 26px; height: 26px; }
+.dpad .u { grid-column: 2; grid-row: 1; } .dpad .l { grid-column: 1; grid-row: 2; } .dpad .r { grid-column: 3; grid-row: 2; } .dpad .d { grid-column: 2; grid-row: 3; }
 @media (hover: hover) and (pointer: fine) { .touch-only { display: none; } }
 @media not ((hover: hover) and (pointer: fine)) { .keys { display: none; } }
 .keys { margin-top: 10px; text-align: center; font-size: .75rem; color: var(--muted); }

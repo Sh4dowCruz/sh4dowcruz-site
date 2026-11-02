@@ -712,7 +712,7 @@ function makeSnake() {
   const tMove = (e) => {
     if (!touch) return;
     const dx = e.clientX - touch[0], dy = e.clientY - touch[1];
-    if (Math.hypot(dx, dy) < 24) return;
+    if (Math.hypot(dx, dy) < 16) return;
     turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
     touch = [e.clientX, e.clientY];
   };
@@ -748,7 +748,12 @@ const jb = $("#jumpBtn"), db = $("#duckBtn");
 jb.addEventListener("pointerdown", (e) => { e.preventDefault(); current.jump?.(true); });
 db.addEventListener("pointerdown", (e) => { e.preventDefault(); current.duck?.(true); });
 for (const ev of ["pointerup", "pointercancel", "pointerleave"]) db.addEventListener(ev, () => current.duck?.(false));
-$$("#snakePad [data-dir]").forEach((b) => b.addEventListener("pointerdown", (e) => { e.preventDefault(); current.turn?.(b.dataset.dir); }));
+$$("#snakePad [data-dir]").forEach((b) => b.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  current.turn?.(b.dataset.dir);
+  try { navigator.vibrate?.(8); } catch {}
+  b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 110);
+}));
 
 function paintBoardNote() {
   const n = $("#boardNote");
