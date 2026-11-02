@@ -7,8 +7,11 @@ import {
   clearScores,
   deleteScore,
   getMusic,
+  listPlayers,
   listScores,
+  resetPlayerPin,
   setMusic,
+  type PlayerRow,
   type ScoreRow,
 } from "@/lib/scores.functions";
 
@@ -38,6 +41,8 @@ function Admin() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [music, setMusicUrl] = useState("");
   const [musicNote, setMusicNote] = useState("");
+  const [players, setPlayers] = useState<PlayerRow[]>([]);
+  const [playerNote, setPlayerNote] = useState("");
 
   useEffect(() => {
     adminOpen()
@@ -53,6 +58,9 @@ function Admin() {
     getMusic()
       .then((result) => setMusicUrl(result.url))
       .catch(() => setError("Music could not be loaded."));
+    listPlayers()
+      .then(setPlayers)
+      .catch(() => setError("Players could not be loaded."));
   }, [user]);
 
   async function reload() {
@@ -117,7 +125,44 @@ function Admin() {
               </button>
               {musicNote ? <p className="text-sm text-muted">{musicNote}</p> : null}
             </form>
-            <ul className="mt-8 flex flex-col gap-2">
+            <h2 className="mt-10 font-display text-2xl tracking-tight">Players</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              Reset a PIN when someone forgets theirs. Their streak and scores stay; the next person to play under that name sets a new PIN.
+            </p>
+            {playerNote ? <p className="mt-3 text-sm text-muted">{playerNote}</p> : null}
+            <ul className="mt-4 flex flex-col gap-2">
+              {players.length === 0 ? <li className="text-sm text-muted">No players yet.</li> : null}
+              {players.map((player) => (
+                <li
+                  key={player.key}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-fg/10 bg-surface px-4 py-3"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm">{player.name}</span>
+                    <span className="text-xs text-muted tabular-nums">
+                      {player.claimed ? "PIN set" : "No PIN (free to claim)"} · {player.streak}-day streak
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!player.claimed}
+                    className="min-h-11 shrink-0 text-sm text-muted hover:text-fg disabled:opacity-40"
+                    onClick={() => {
+                      setError("");
+                      setPlayerNote("");
+                      resetPlayerPin({ data: { key: player.key } })
+                        .then(() => listPlayers().then(setPlayers))
+                        .then(() => setPlayerNote(`${player.name} can now set a new PIN on their next game.`))
+                        .catch(() => setError("Could not reset that PIN."));
+                    }}
+                  >
+                    Reset PIN
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <h2 className="mt-10 font-display text-2xl tracking-tight">Scores</h2>
+            <ul className="mt-4 flex flex-col gap-2">
               {rows.length === 0 ? <li className="text-sm text-muted">No scores yet.</li> : null}
               {rows.map((row) => (
                 <li

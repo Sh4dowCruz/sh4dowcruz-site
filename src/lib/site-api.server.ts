@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { getSql } from "@/lib/db";
+import { bestScores, checkIn, cleanDay, PlayerError, signInPlayer, type Player } from "@/lib/players.server";
 
 /* Plain JSON endpoints behind the public page (src/routes/index.tsx + public/site/site.js).
    The admin page keeps using the auth-protected server functions in scores.functions.ts. */
 
-const NAME = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
 const MAX_SCORE = { snake: 222, dino: 99999 } as const;
 type Game = keyof typeof MAX_SCORE;
 
@@ -45,21 +45,49 @@ export async function boardResponse(request: Request): Promise<Response> {
   });
 }
 
+function playerErrorResponse(err: unknown): Response {
+  if (err instanceof PlayerError) return json({ error: err.message, code: err.code }, err.status);
+  throw err;
+}
+
+/* Sign in (or claim) a name with its PIN. Optionally counts today toward the streak (Study does this). */
+export async function playerResponse(request: Request): Promise<Response> {
+  let body: { name?: unknown; pin?: unknown; day?: unknown; checkin?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: "Bad request." }, 400);
+  }
+  const sql = await getSql();
+  try {
+    const { player, claimed } = await signInPlayer(sql, body.name, body.pin);
+    const streak = body.checkin === true ? await checkIn(sql, player, cleanDay(body.day)) : player.streak;
+    return json({ name: player.name, claimed, streak, best: await bestScores(sql, player.name) });
+  } catch (err) {
+    return playerErrorResponse(err);
+  }
+}
+
 export async function scoreResponse(request: Request): Promise<Response> {
-  let body: { name?: unknown; score?: unknown; game?: unknown };
+  let body: { name?: unknown; pin?: unknown; score?: unknown; game?: unknown; day?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: "Bad request." }, 400);
   }
   const game = cleanGame(body.game);
-  const name = String(body.name ?? "").trim().replace(/\s+/g, " ");
   const score = Number(body.score);
-  if (!NAME.test(name)) return json({ error: "Use 1–16 letters or numbers." }, 400);
   if (!Number.isInteger(score) || score < 1 || score > MAX_SCORE[game]) {
     return json({ error: "That score cannot be saved." }, 400);
   }
   const sql = await getSql();
+  let player: Player;
+  try {
+    ({ player } = await signInPlayer(sql, body.name, body.pin));
+  } catch (err) {
+    return playerErrorResponse(err);
+  }
+  const name = player.name;
   const recent = await sql<{ at: string; best: number | null }>`
     select max(created_at)::text as at, max(score) as best
     from scores
@@ -67,10 +95,11 @@ export async function scoreResponse(request: Request): Promise<Response> {
   `;
   const last = recent[0]?.at ? Date.parse(recent[0].at) : 0;
   if (last && Date.now() - last < 8000) return json({ error: "Wait a moment before saving again." }, 429);
+  const streak = await checkIn(sql, player, cleanDay(body.day));
   const best = Number(recent[0]?.best ?? 0);
-  if (best >= score) return json({ status: "kept", best });
+  if (best >= score) return json({ status: "kept", best, streak });
   await sql`insert into scores (player_name, score, game) values (${name}, ${score}, ${game})`;
-  return json({ status: "saved", best: score });
+  return json({ status: "saved", best: score, streak });
 }
 
 export async function musicResponse(): Promise<Response> {

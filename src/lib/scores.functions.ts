@@ -162,3 +162,36 @@ function youtubeParts(raw: string): { video: string; playlist: string } | null {
   if (!video && !playlist) return null;
   return { video, playlist };
 }
+
+export type PlayerRow = { key: string; name: string; claimed: boolean; streak: number; last: string | null };
+
+export const listPlayers = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async () => {
+    const sql = await getSql();
+    const rows = await sql<{ name_key: string; name: string; claimed: boolean; streak_count: number; streak_last: string | null }>`
+      select name_key, name, pin_hash is not null as claimed, streak_count, streak_last
+      from players
+      order by updated_at desc
+      limit 200
+    `;
+    return rows.map((row) => ({
+      key: row.name_key,
+      name: row.name,
+      claimed: Boolean(row.claimed),
+      streak: Number(row.streak_count) || 0,
+      last: row.streak_last,
+    }));
+  });
+
+/** Clear a player's PIN so the next person to play under that name sets a new one. The streak is kept. */
+export const resetPlayerPin = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { key: string }) => input)
+  .handler(async ({ data }) => {
+    const key = String(data.key ?? "").trim().toLowerCase();
+    if (!key) throw new Error("Missing player.");
+    const sql = await getSql();
+    await sql`update players set pin_hash = null, pin_salt = null, failed_attempts = 0, locked_until = null, updated_at = now() where name_key = ${key}`;
+    return { ok: true as const };
+  });

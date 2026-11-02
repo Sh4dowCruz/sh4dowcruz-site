@@ -136,8 +136,40 @@ const fx = (() => {
   };
 })();
 
+/* ---------- player (name + PIN) ---------- */
+// me.verified = the server accepted this name + PIN; streak then comes from the server and follows the name.
+const PIN_RE = /^\d{4,6}$/;
+const me = { name: "", pin: "", verified: false, streak: null };
+(() => {
+  const saved = store.get("cruz.player", null);
+  if (saved && NAME_RE.test(saved.name || "") && PIN_RE.test(saved.pin || "")) { me.name = saved.name; me.pin = saved.pin; }
+  else { const legacy = store.get("cruz.player.name", ""); if (NAME_RE.test(legacy)) me.name = legacy; }
+})();
+function rememberPlayer(d) {
+  me.name = d.name; me.verified = true; me.streak = d.streak || null;
+  store.set("cruz.player", { name: me.name, pin: me.pin });
+  for (const g of ["dino", "snake"]) if (d.best && d.best[g] > localBest(g)) store.set("cruz.best." + g, d.best[g]);
+  paintBest?.(); paintStreak();
+}
+function forgetPlayer() {
+  me.name = ""; me.pin = ""; me.verified = false; me.streak = null;
+  try { localStorage.removeItem("cruz.player"); localStorage.removeItem("cruz.player.name"); } catch {}
+  paintStreak();
+}
+async function signIn(name, pin, checkin = false) {
+  me.pin = pin;
+  const d = await api("/api/player", { name, pin, day: today(), checkin });
+  rememberPlayer(d);
+  return d;
+}
+
 /* ---------- streak ---------- */
 function bumpStreak() {
+  if (me.verified) {
+    api("/api/player", { name: me.name, pin: me.pin, day: today(), checkin: true })
+      .then((d) => { me.streak = d.streak; paintStreak(); })
+      .catch(() => {});
+  }
   const s = store.get("cruz.streak", { last: "", count: 0 });
   const t = today();
   if (s.last === t) return s;
@@ -146,7 +178,7 @@ function bumpStreak() {
   s.last = t; store.set("cruz.streak", s); paintStreak(); return s;
 }
 function paintStreak() {
-  const s = store.get("cruz.streak", { last: "", count: 0 });
+  const s = me.verified && me.streak ? { count: me.streak.count, last: me.streak.last || "" } : store.get("cruz.streak", { last: "", count: 0 });
   const y = new Date(); y.setDate(y.getDate() - 1);
   const alive = s.last === today() || s.last === y.toLocaleDateString("en-CA");
   const chip = $("#streakChip");
@@ -154,7 +186,6 @@ function paintStreak() {
   chip.hidden = false;
   chip.innerHTML = `${ICON.flame}<span><b class="tnum">${s.count}-day</b> streak${s.last === today() ? "" : " · play today to keep it"}</span>`;
 }
-paintStreak();
 
 /* ---------- server API ---------- */
 const plat = { owner: false, boards: { dino: [], snake: [] }, boardReady: { dino: false, snake: false }, studyOn: true };
@@ -163,7 +194,7 @@ function onBoardsChanged() { for (const f of boardListeners) f(); }
 async function api(path, body) {
   const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : { cache: "no-store" });
   let data = null; try { data = await res.json(); } catch {}
-  if (!res.ok) throw { status: res.status, message: data?.error || "Something went wrong." };
+  if (!res.ok) throw { status: res.status, code: data?.code || "", message: data?.error || "Something went wrong." };
   return data;
 }
 async function loadBoard(g) {
@@ -260,19 +291,24 @@ setInterval(() => { if (document.visibilityState === "visible") loadPresence(); 
 
 /* ---------- scores ---------- */
 const keyFor = (name) => name.toLowerCase().replace(/[^a-z0-9_.-]/g, "-");
-function myName() { const n = store.get("cruz.player.name", ""); return NAME_RE.test(n) ? n : ""; }
+function myName() { return me.name; }
 function localBest(g) { return store.get("cruz.best." + g, 0); }
 function rankFor(g, score, name) {
   const lk = keyFor(name || "");
   return plat.boards[g].filter((r) => r.id !== lk && r.score > score).length + 1;
 }
 async function submitScore(g, name, score) {
-  if (!NAME_RE.test(name) || score < 1) return "local";
+  if (!NAME_RE.test(name) || !PIN_RE.test(me.pin) || score < 1) return "local";
   try {
-    const d = await api("/api/score", { game: g, name, score });
+    const d = await api("/api/score", { game: g, name, pin: me.pin, score, day: today() });
+    if (d?.streak) { me.verified = true; me.streak = d.streak; paintStreak(); }
     loadBoard(g);
     return d?.status === "kept" ? "kept" : "saved";
-  } catch (e) { return e?.status === 429 ? "wait" : "failed"; }
+  } catch (e) {
+    if (e?.code === "wrong_pin") { me.verified = false; return "pin"; }
+    if (e?.code === "locked") return "locked";
+    return e?.status === 429 ? "wait" : "failed";
+  }
 }
 
 /* ======================================================
@@ -300,24 +336,61 @@ function toast(text) { const t = document.createElement("div"); t.className = "t
 
 /* overlay states */
 function showStart() {
-  const name = myName();
   overlay.hidden = false;
-  overlay.innerHTML = `
-    <form class="card" id="startForm">
-      <span class="kicker">${game === "dino" ? "Dinosaur run" : "Snake"}</span>
-      <label class="sub" for="pname">Name on the board</label>
-      <input id="pname" maxlength="16" autocomplete="nickname" value="${esc(name)}" placeholder="Your name">
-      <button class="btn" type="submit">Play</button>
-      <span class="sub">${game === "dino" ? "Jump the cacti, duck the birds." : "Eat, grow, don't bite yourself."}</span>
-      <span class="err" id="nameErr" hidden>Use 1–16 letters or numbers.</span>
-    </form>`;
+  const blurb = game === "dino" ? "Jump the cacti, duck the birds." : "Eat, grow, don't bite yourself.";
+  if (me.verified || (me.name && PIN_RE.test(me.pin))) {
+    overlay.innerHTML = `
+      <form class="card" id="startForm">
+        <span class="kicker">${game === "dino" ? "Dinosaur run" : "Snake"}</span>
+        <span class="sub">Playing as <b class="who-name">${esc(me.name)}</b> · <button type="button" class="linkish" id="switchBtn">Not you?</button></span>
+        <button class="btn" type="submit" id="playBtn">Play</button>
+        <span class="sub">${blurb}</span>
+        <span class="err" id="nameErr" hidden></span>
+      </form>`;
+    $("#switchBtn").addEventListener("click", () => { forgetPlayer(); showStart(); $("#pname")?.focus(); });
+  } else {
+    overlay.innerHTML = `
+      <form class="card" id="startForm" autocomplete="on">
+        <span class="kicker">${game === "dino" ? "Dinosaur run" : "Snake"}</span>
+        <div class="who-row">
+          <label class="sr" for="pname">Name on the board</label>
+          <input id="pname" name="username" maxlength="16" autocomplete="username" value="${esc(me.name)}" placeholder="Name">
+          <label class="sr" for="ppin">PIN, 4 to 6 digits</label>
+          <input id="ppin" name="password" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="PIN">
+        </div>
+        <span class="sub hint">New name? Pick any 4–6 digit PIN. It keeps your streak and scores on any device.</span>
+        <button class="btn" type="submit" id="playBtn">Play</button>
+        <span class="err" id="nameErr" hidden></span>
+      </form>`;
+  }
   $("#startForm").addEventListener("submit", onStart);
 }
-function onStart(e) {
+function startErr(msg) { const e = $("#nameErr"); if (e) { e.textContent = msg; e.hidden = !msg; } }
+async function onStart(e) {
   e.preventDefault();
-  const n = $("#pname").value.trim().replace(/\s+/g, " ");
-  if (!NAME_RE.test(n)) { $("#nameErr").hidden = false; return; }
-  store.set("cruz.player.name", n);
+  startErr("");
+  const btn = $("#playBtn");
+  if (!me.verified) {
+    const pnameEl = $("#pname"), ppinEl = $("#ppin");
+    const n = pnameEl ? pnameEl.value.trim().replace(/\s+/g, " ") : me.name;
+    const pin = ppinEl ? ppinEl.value.trim() : me.pin;
+    if (!NAME_RE.test(n)) { startErr("Use 1–16 letters or numbers for your name."); return; }
+    if (!PIN_RE.test(pin)) { startErr("Your PIN is 4 to 6 digits."); return; }
+    btn.disabled = true; btn.textContent = "Checking…";
+    try {
+      const d = await signIn(n, pin);
+      if (d.claimed) toast(`${d.name} is yours`);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = "Play";
+      if (err && err.status) {
+        if (err.code === "wrong_pin" && !ppinEl) { me.pin = ""; me.verified = false; showStart(); startErr("Your PIN changed. Enter it again."); return; }
+        startErr(err.message || "That didn't work."); return;
+      }
+      // Can't reach the board: play anyway, scores just won't save this time.
+      me.name = n; me.pin = pin;
+      toast("Offline: this run won't be saved");
+    }
+  }
   overlay.hidden = true; overlay.innerHTML = "";
   sfx.click();
   current.start();
@@ -328,7 +401,7 @@ async function showOver(score) {
   const prev = localBest(game);
   const isBest = score > prev && score > 0;
   if (isBest) { store.set("cruz.best." + game, score); paintBest(); }
-  if (score > 0) bumpStreak();
+  if (score > 0 && !me.verified) bumpStreak();
   const top = plat.boards[game][0]?.score || 0;
   const rank = rankFor(game, score, name);
   const boardTop = score > 0 && score >= top && plat.boardReady[game] === true;
@@ -348,7 +421,7 @@ async function showOver(score) {
   // count-up
   const el = $("#ovScore"), t0 = performance.now(), dur = Math.min(900, 300 + score * 2);
   (function up(now) { const k = clamp((now - t0) / dur, 0, 1); el.textContent = Math.round(score * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(up); })(t0);
-  $("#againBtn").addEventListener("click", () => { overlay.hidden = true; overlay.innerHTML = ""; sfx.click(); current.start(); });
+  $("#againBtn").addEventListener("click", () => { sfx.click(); if (!me.verified) { showStart(); return; } overlay.hidden = true; overlay.innerHTML = ""; current.start(); });
   $("#againBtn").focus({ preventScroll: true });
   if (isBest) {
     setTimeout(() => { const r = stage.getBoundingClientRect(); fx.confetti(r.left + r.width / 2, r.top + r.height * 0.45, boardTop ? 200 : 120); sfx.best(); }, 250);
@@ -356,7 +429,7 @@ async function showOver(score) {
   if (score > 0 && name) {
     const res = await submitScore(game, name, score);
     const s = $("#ovSave"); if (!s) return;
-    s.textContent = { saved: "Saved to the board", kept: "Your board best stays higher", wait: "Saved a moment ago, try again shortly", failed: "Couldn't reach the board", local: "" }[res] || "";
+    s.textContent = { saved: "Saved to the board", kept: "Your board best stays higher", wait: "Saved a moment ago, try again shortly", failed: "Couldn't reach the board", pin: "Not saved: your PIN changed. Tap Play again to re-enter it.", locked: "Not saved: too many wrong PINs, try later.", local: "" }[res] || "";
   }
 }
 
@@ -1140,5 +1213,11 @@ addEventListener("hashchange", go);
 selectGame(game);
 go();
 initPlatform();
+paintStreak();
+if (me.name && PIN_RE.test(me.pin)) {
+  signIn(me.name, me.pin).catch((e) => {
+    if (e?.code === "wrong_pin") { me.pin = ""; me.verified = false; try { localStorage.removeItem("cruz.player"); } catch {} if ($("#startForm")) showStart(); }
+  });
+}
 // until the platform answers, Study waits; if it never does, show the fallback
 })();

@@ -147,6 +147,11 @@ a { color: inherit; }
 .card .best-flag { font-size: .8125rem; font-weight: 600; color: var(--accent-ink); background: var(--accent); padding: 4px 10px; border-radius: 999px; animation: glow 1.4s ease-in-out infinite alternate; }
 @keyframes glow { to { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 22%, transparent); } }
 .card .sub:empty { display: none; }
+.who-row { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 8px; width: 100%; max-width: 17rem; }
+.who-row input { max-width: none; }
+.card .hint { font-size: .75rem; line-height: 1.35; max-width: 17rem; }
+.who-name { color: var(--fg); }
+.linkish { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .card input { height: 42px; width: 100%; max-width: 14rem; text-align: center; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); outline: none; }
 .card input:focus { border-color: var(--accent); }
 .btn { min-height: 42px; padding: 0 20px; border-radius: 999px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: .875rem; transition: transform .15s ease-out; }
