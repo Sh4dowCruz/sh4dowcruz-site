@@ -13,6 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as StudyRouteImport } from './routes/study'
+import { Route as ApiBoardRouteImport } from './routes/api/board'
+import { Route as ApiMusicRouteImport } from './routes/api/music'
+import { Route as ApiPlayerRouteImport } from './routes/api/player'
+import { Route as ApiRenameRouteImport } from './routes/api/rename'
+import { Route as ApiScoreRouteImport } from './routes/api/score'
+import { Route as ApiStudyRouteImport } from './routes/api/study'
 import { Route as StudyQuizRouteImport } from './routes/study_.quiz'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -36,6 +42,36 @@ const StudyRoute = StudyRouteImport.update({
   path: '/study',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBoardRoute = ApiBoardRouteImport.update({
+  id: '/api/board',
+  path: '/api/board',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMusicRoute = ApiMusicRouteImport.update({
+  id: '/api/music',
+  path: '/api/music',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlayerRoute = ApiPlayerRouteImport.update({
+  id: '/api/player',
+  path: '/api/player',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRenameRoute = ApiRenameRouteImport.update({
+  id: '/api/rename',
+  path: '/api/rename',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiScoreRoute = ApiScoreRouteImport.update({
+  id: '/api/score',
+  path: '/api/score',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStudyRoute = ApiStudyRouteImport.update({
+  id: '/api/study',
+  path: '/api/study',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudyQuizRoute = StudyQuizRouteImport.update({
   id: '/study_/quiz',
   path: '/study/quiz',
@@ -52,6 +88,12 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/study': typeof StudyRoute
+  '/api/board': typeof ApiBoardRoute
+  '/api/music': typeof ApiMusicRoute
+  '/api/player': typeof ApiPlayerRoute
+  '/api/rename': typeof ApiRenameRoute
+  '/api/score': typeof ApiScoreRoute
+  '/api/study': typeof ApiStudyRoute
   '/study/quiz': typeof StudyQuizRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -60,6 +102,12 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/study': typeof StudyRoute
+  '/api/board': typeof ApiBoardRoute
+  '/api/music': typeof ApiMusicRoute
+  '/api/player': typeof ApiPlayerRoute
+  '/api/rename': typeof ApiRenameRoute
+  '/api/score': typeof ApiScoreRoute
+  '/api/study': typeof ApiStudyRoute
   '/study/quiz': typeof StudyQuizRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -69,21 +117,56 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/study': typeof StudyRoute
+  '/api/board': typeof ApiBoardRoute
+  '/api/music': typeof ApiMusicRoute
+  '/api/player': typeof ApiPlayerRoute
+  '/api/rename': typeof ApiRenameRoute
+  '/api/score': typeof ApiScoreRoute
+  '/api/study': typeof ApiStudyRoute
   '/study_/quiz': typeof StudyQuizRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/board' | '/study' | '/study/quiz' | '/api/auth/$'
+    | '/'
+    | '/admin'
+    | '/board'
+    | '/study'
+    | '/api/board'
+    | '/api/music'
+    | '/api/player'
+    | '/api/rename'
+    | '/api/score'
+    | '/api/study'
+    | '/study/quiz'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/board' | '/study' | '/study/quiz' | '/api/auth/$'
+  to:
+    | '/'
+    | '/admin'
+    | '/board'
+    | '/study'
+    | '/api/board'
+    | '/api/music'
+    | '/api/player'
+    | '/api/rename'
+    | '/api/score'
+    | '/api/study'
+    | '/study/quiz'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/board'
     | '/study'
+    | '/api/board'
+    | '/api/music'
+    | '/api/player'
+    | '/api/rename'
+    | '/api/score'
+    | '/api/study'
     | '/study_/quiz'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
@@ -93,6 +176,12 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   BoardRoute: typeof BoardRoute
   StudyRoute: typeof StudyRoute
+  ApiBoardRoute: typeof ApiBoardRoute
+  ApiMusicRoute: typeof ApiMusicRoute
+  ApiPlayerRoute: typeof ApiPlayerRoute
+  ApiRenameRoute: typeof ApiRenameRoute
+  ApiScoreRoute: typeof ApiScoreRoute
+  ApiStudyRoute: typeof ApiStudyRoute
   StudyQuizRoute: typeof StudyQuizRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -127,6 +216,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/board': {
+      id: '/api/board'
+      path: '/api/board'
+      fullPath: '/api/board'
+      preLoaderRoute: typeof ApiBoardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/music': {
+      id: '/api/music'
+      path: '/api/music'
+      fullPath: '/api/music'
+      preLoaderRoute: typeof ApiMusicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/player': {
+      id: '/api/player'
+      path: '/api/player'
+      fullPath: '/api/player'
+      preLoaderRoute: typeof ApiPlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rename': {
+      id: '/api/rename'
+      path: '/api/rename'
+      fullPath: '/api/rename'
+      preLoaderRoute: typeof ApiRenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/score': {
+      id: '/api/score'
+      path: '/api/score'
+      fullPath: '/api/score'
+      preLoaderRoute: typeof ApiScoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/study': {
+      id: '/api/study'
+      path: '/api/study'
+      fullPath: '/api/study'
+      preLoaderRoute: typeof ApiStudyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/study_/quiz': {
       id: '/study_/quiz'
       path: '/study/quiz'
@@ -149,6 +280,12 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   BoardRoute: BoardRoute,
   StudyRoute: StudyRoute,
+  ApiBoardRoute: ApiBoardRoute,
+  ApiMusicRoute: ApiMusicRoute,
+  ApiPlayerRoute: ApiPlayerRoute,
+  ApiRenameRoute: ApiRenameRoute,
+  ApiScoreRoute: ApiScoreRoute,
+  ApiStudyRoute: ApiStudyRoute,
   StudyQuizRoute: StudyQuizRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
