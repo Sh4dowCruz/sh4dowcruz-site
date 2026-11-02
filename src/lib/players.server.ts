@@ -158,3 +158,57 @@ export async function bestScores(sql: Sql, name: string): Promise<{ dino: number
   for (const row of rows) if (row.game === "dino" || row.game === "snake") out[row.game] = Number(row.best) || 0;
   return out;
 }
+
+const RENAME_COOLDOWN_DAYS = 7;
+
+/**
+ * Move a player to a new name, carrying their PIN, streak and scores.
+ * The new name must be completely free: no player owns it and no scores sit under it,
+ * so a rename can never merge into someone else's history. A change of capitalization
+ * only ("cruz" → "Cruz") is always allowed.
+ */
+export async function renamePlayer(
+  sql: Sql,
+  fromKey: string,
+  rawNewName: unknown,
+  opts: { cooldown: boolean },
+): Promise<Player> {
+  const newName = cleanName(rawNewName);
+  const newKey = playerKey(newName);
+  const rows = await sql<{ name: string; streak_count: number; streak_last: string | null; days_left: number | null }>`
+    select name, streak_count, streak_last,
+           case when renamed_at > now() - interval '7 days'
+                then ceil(extract(epoch from (renamed_at + interval '7 days' - now())) / 86400)::int end as days_left
+    from players where name_key = ${fromKey}
+  `;
+  const current = rows[0];
+  if (!current) throw new PlayerError("That player doesn't exist.", 404, "no_player");
+  if (current.name === newName) throw new PlayerError("That's already the name.", 400, "same_name");
+
+  const sameKey = newKey === fromKey;
+  if (opts.cooldown && !sameKey && current.days_left) {
+    const d = Math.max(1, Number(current.days_left) || RENAME_COOLDOWN_DAYS);
+    throw new PlayerError(`You can change your name again in ${d} day${d === 1 ? "" : "s"}.`, 429, "rename_cooldown");
+  }
+  if (!sameKey) {
+    const taken = await sql<{ n: number }>`
+      select (select count(*) from players where name_key = ${newKey})
+           + (select count(*) from scores where lower(player_name) = ${newKey}) as n
+    `;
+    if (Number(taken[0]?.n) > 0) throw new PlayerError("That name is already taken.", 409, "name_taken");
+  }
+
+  // Player row first: the primary key rejects a racing rename into the same name.
+  try {
+    await sql`
+      update players
+      set name_key = ${newKey}, name = ${newName}, updated_at = now(),
+          renamed_at = case when ${opts.cooldown} and ${!sameKey} then now() else renamed_at end
+      where name_key = ${fromKey}
+    `;
+  } catch {
+    throw new PlayerError("That name is already taken.", 409, "name_taken");
+  }
+  await sql`update scores set player_name = ${newName} where lower(player_name) = ${fromKey}`;
+  return { key: newKey, name: newName, streak: { count: Number(current.streak_count) || 0, last: current.streak_last } };
+}

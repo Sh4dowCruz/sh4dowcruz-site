@@ -342,12 +342,13 @@ function showStart() {
     overlay.innerHTML = `
       <form class="card" id="startForm">
         <span class="kicker">${game === "dino" ? "Dinosaur run" : "Snake"}</span>
-        <span class="sub">Playing as <b class="who-name">${esc(me.name)}</b> · <button type="button" class="linkish" id="switchBtn">Not you?</button></span>
+        <span class="sub">Playing as <b class="who-name">${esc(me.name)}</b> · <button type="button" class="linkish" id="renameBtn">Change name</button> · <button type="button" class="linkish" id="switchBtn">Not you?</button></span>
         <button class="btn" type="submit" id="playBtn">Play</button>
         <span class="sub">${blurb}</span>
         <span class="err" id="nameErr" hidden></span>
       </form>`;
     $("#switchBtn").addEventListener("click", () => { forgetPlayer(); showStart(); $("#pname")?.focus(); });
+    $("#renameBtn").addEventListener("click", showRename);
   } else {
     overlay.innerHTML = `
       <form class="card" id="startForm" autocomplete="on">
@@ -364,6 +365,42 @@ function showStart() {
       </form>`;
   }
   $("#startForm").addEventListener("submit", onStart);
+}
+function showRename() {
+  overlay.hidden = false;
+  overlay.innerHTML = `
+    <form class="card" id="renameForm">
+      <span class="kicker">Change name</span>
+      <label class="sr" for="newName">New name</label>
+      <input id="newName" maxlength="16" autocomplete="off" value="${esc(me.name)}" placeholder="New name">
+      <span class="sub hint">Your PIN, streak and scores come with you. You can change it once a week.</span>
+      <div class="btn-row">
+        <button class="btn" type="submit" id="renameSave">Save</button>
+        <button class="btn ghost" type="button" id="renameCancel">Cancel</button>
+      </div>
+      <span class="err" id="renameErr" hidden></span>
+    </form>`;
+  const input = $("#newName"); input.focus(); input.select();
+  $("#renameCancel").addEventListener("click", showStart);
+  $("#renameForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = $("#renameErr"), save = $("#renameSave");
+    const next = input.value.trim().replace(/\s+/g, " ");
+    const fail = (m) => { errEl.textContent = m; errEl.hidden = false; };
+    if (!NAME_RE.test(next)) return fail("Use 1–16 letters or numbers.");
+    if (next === me.name) return showStart();
+    save.disabled = true; save.textContent = "Saving…";
+    try {
+      const d = await api("/api/rename", { name: me.name, pin: me.pin, newName: next });
+      rememberPlayer(d);
+      refreshBoards();
+      showStart();
+      toast(`You're now ${d.name}`);
+    } catch (err) {
+      save.disabled = false; save.textContent = "Save";
+      fail(err?.status ? err.message : "Couldn't reach the board. Try again.");
+    }
+  });
 }
 function startErr(msg) { const e = $("#nameErr"); if (e) { e.textContent = msg; e.hidden = !msg; } }
 async function onStart(e) {

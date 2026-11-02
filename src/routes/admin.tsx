@@ -9,6 +9,7 @@ import {
   getMusic,
   listPlayers,
   listScores,
+  renamePlayerAdmin,
   resetPlayerPin,
   setMusic,
   type PlayerRow,
@@ -43,6 +44,8 @@ function Admin() {
   const [musicNote, setMusicNote] = useState("");
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [playerNote, setPlayerNote] = useState("");
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
 
   useEffect(() => {
     adminOpen()
@@ -135,7 +138,7 @@ function Admin() {
               {players.map((player) => (
                 <li
                   key={player.key}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-fg/10 bg-surface px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-fg/10 bg-surface px-4 py-3"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm">{player.name}</span>
@@ -143,21 +146,65 @@ function Admin() {
                       {player.claimed ? "PIN set" : "No PIN (free to claim)"} · {player.streak}-day streak
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    disabled={!player.claimed}
-                    className="min-h-11 shrink-0 text-sm text-muted hover:text-fg disabled:opacity-40"
-                    onClick={() => {
-                      setError("");
-                      setPlayerNote("");
-                      resetPlayerPin({ data: { key: player.key } })
-                        .then(() => listPlayers().then(setPlayers))
-                        .then(() => setPlayerNote(`${player.name} can now set a new PIN on their next game.`))
-                        .catch(() => setError("Could not reset that PIN."));
-                    }}
-                  >
-                    Reset PIN
-                  </button>
+                  <span className="flex shrink-0 gap-3">
+                    <button
+                      type="button"
+                      className="min-h-11 text-sm text-muted hover:text-fg"
+                      onClick={() => {
+                        setRenaming(renaming === player.key ? null : player.key);
+                        setNewName(player.name);
+                        setPlayerNote("");
+                        setError("");
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!player.claimed}
+                      className="min-h-11 text-sm text-muted hover:text-fg disabled:opacity-40"
+                      onClick={() => {
+                        setError("");
+                        setPlayerNote("");
+                        resetPlayerPin({ data: { key: player.key } })
+                          .then(() => listPlayers().then(setPlayers))
+                          .then(() => setPlayerNote(`${player.name} can now set a new PIN on their next game.`))
+                          .catch(() => setError("Could not reset that PIN."));
+                      }}
+                    >
+                      Reset PIN
+                    </button>
+                  </span>
+                  {renaming === player.key ? (
+                    <form
+                      className="flex w-full gap-2"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        setError("");
+                        renamePlayerAdmin({ data: { key: player.key, newName } })
+                          .then((result) => {
+                            setRenaming(null);
+                            setPlayerNote(`Renamed ${player.name} to ${result.name}. Their PIN, streak and scores moved with them.`);
+                            return Promise.all([listPlayers().then(setPlayers), reload()]);
+                          })
+                          .catch((err) => setError(err instanceof Error ? err.message : "Could not rename that player."));
+                      }}
+                    >
+                      <label className="sr-only" htmlFor={`rename-${player.key}`}>
+                        New name for {player.name}
+                      </label>
+                      <input
+                        id={`rename-${player.key}`}
+                        value={newName}
+                        maxLength={16}
+                        onChange={(event) => setNewName(event.target.value)}
+                        className="min-h-11 min-w-0 flex-1 rounded-xl border border-fg/10 bg-bg px-3 text-base outline-none focus:border-accent"
+                      />
+                      <button type="submit" className="min-h-11 rounded-full bg-accent px-4 text-sm font-medium text-bg">
+                        Save
+                      </button>
+                    </form>
+                  ) : null}
                 </li>
               ))}
             </ul>

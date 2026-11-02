@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { getSql } from "@/lib/db";
-import { bestScores, checkIn, cleanDay, PlayerError, signInPlayer, type Player } from "@/lib/players.server";
+import { bestScores, checkIn, cleanDay, PlayerError, renamePlayer, signInPlayer, type Player } from "@/lib/players.server";
 
 /* Plain JSON endpoints behind the public page (src/routes/index.tsx + public/site/site.js).
    The admin page keeps using the auth-protected server functions in scores.functions.ts. */
@@ -63,6 +63,24 @@ export async function playerResponse(request: Request): Promise<Response> {
     const { player, claimed } = await signInPlayer(sql, body.name, body.pin);
     const streak = body.checkin === true ? await checkIn(sql, player, cleanDay(body.day)) : player.streak;
     return json({ name: player.name, claimed, streak, best: await bestScores(sql, player.name) });
+  } catch (err) {
+    return playerErrorResponse(err);
+  }
+}
+
+/* A signed-in player changes their own name (PIN required, once a week). */
+export async function renameResponse(request: Request): Promise<Response> {
+  let body: { name?: unknown; pin?: unknown; newName?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: "Bad request." }, 400);
+  }
+  const sql = await getSql();
+  try {
+    const { player } = await signInPlayer(sql, body.name, body.pin);
+    const renamed = await renamePlayer(sql, player.key, body.newName, { cooldown: true });
+    return json({ name: renamed.name, streak: renamed.streak, best: await bestScores(sql, renamed.name) });
   } catch (err) {
     return playerErrorResponse(err);
   }

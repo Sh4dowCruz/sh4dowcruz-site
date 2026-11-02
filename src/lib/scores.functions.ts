@@ -195,3 +195,19 @@ export const resetPlayerPin = createServerFn({ method: "POST" })
     await sql`update players set pin_hash = null, pin_salt = null, failed_attempts = 0, locked_until = null, updated_at = now() where name_key = ${key}`;
     return { ok: true as const };
   });
+
+/** Admin rename: no cooldown, but the new name must still be free so two players never merge. */
+export const renamePlayerAdmin = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { key: string; newName: string }) => input)
+  .handler(async ({ data }) => {
+    const { renamePlayer, PlayerError } = await import("@/lib/players.server");
+    const sql = await getSql();
+    try {
+      const player = await renamePlayer(sql, String(data.key ?? "").trim().toLowerCase(), data.newName, { cooldown: false });
+      return { ok: true as const, name: player.name };
+    } catch (err) {
+      if (err instanceof PlayerError) throw new Error(err.message);
+      throw err;
+    }
+  });
