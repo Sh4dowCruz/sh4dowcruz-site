@@ -148,13 +148,13 @@ const me = { name: "", pin: "", verified: false, streak: null };
 function rememberPlayer(d) {
   me.name = d.name; me.verified = true; me.streak = d.streak || null;
   store.set("cruz.player", { name: me.name, pin: me.pin });
-  for (const g of ["dino", "snake"]) if (d.best && d.best[g] > localBest(g)) store.set("cruz.best." + g, d.best[g]);
+  for (const g of ["dino", "snake"]) if (d.best && d.best[g] > localBest(g)) store.set(bestKey(g), d.best[g]);
   paintBest?.(); paintStreak();
 }
 function forgetPlayer() {
   me.name = ""; me.pin = ""; me.verified = false; me.streak = null;
   try { localStorage.removeItem("cruz.player"); localStorage.removeItem("cruz.player.name"); } catch {}
-  paintStreak();
+  paintStreak(); paintBest();
 }
 async function signIn(name, pin, checkin = false) {
   me.pin = pin;
@@ -292,7 +292,9 @@ setInterval(() => { if (document.visibilityState === "visible") loadPresence(); 
 /* ---------- scores ---------- */
 const keyFor = (name) => name.toLowerCase().replace(/[^a-z0-9_.-]/g, "-");
 function myName() { return me.name; }
-function localBest(g) { return store.get("cruz.best." + g, 0); }
+// Bests are kept per player so switching names never shows someone else's best.
+function bestKey(g) { return "cruz.best." + (me.name ? me.name.toLowerCase() : "~guest") + "." + g; }
+function localBest(g) { return store.get(bestKey(g), 0); }
 function rankFor(g, score, name) {
   const lk = keyFor(name || "");
   return plat.boards[g].filter((r) => r.id !== lk && r.score > score).length + 1;
@@ -437,7 +439,7 @@ async function showOver(score) {
   const name = myName();
   const prev = localBest(game);
   const isBest = score > prev && score > 0;
-  if (isBest) { store.set("cruz.best." + game, score); paintBest(); }
+  if (isBest) { store.set(bestKey(game), score); paintBest(); }
   if (score > 0 && !me.verified) bumpStreak();
   const top = plat.boards[game][0]?.score || 0;
   // Rank the player's standing, not just this run: a run below your board best shouldn't read as a lower place.
